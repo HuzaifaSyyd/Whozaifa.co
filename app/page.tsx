@@ -240,28 +240,28 @@ const ServicesSection = () => {
 const PortfolioSection = () => {
   const projects = [
     {
-      title: "Prompt",
+      title: "Prompt Organizer",
       category: "AI",
       image: "/whozprompt.jpg",
-      link:"/",
+      link:"",
     },
     {
       title: "Block Piston",
-      category: "Mobile Development",
-      image: "/placeholder.svg?height=400&width=600",
-      link:"/",
+      category: "Automotive",
+      image: "/blockpiston.jpg",
+      link:"https://block-hazel.vercel.app/",
     },
     {
-      title: "Product Visualization",
-      category: "3D Design",
-      image: "/placeholder.svg?height=400&width=600",
-      link:"/",
+      title: "Luxury E-Com",
+      category: "E-commerce",
+      image: "/luxury.jpg",
+      link:"https://whoz-luxury.vercel.app/",
     },
     {
-      title: "Corporate Website",
-      category: "Web Design",
-      image: "/placeholder.svg?height=400&width=600",
-      link:"/",
+      title: "Sweet Delight",
+      category: "Cake shop",
+      image: "/sweet.jpg",
+      link:"https://sweet-delight-delta.vercel.app/",
     },
   ]
 
