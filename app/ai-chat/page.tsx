@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, Bot, User, Sparkles, Briefcase, GraduationCap, HeadphonesIcon } from "lucide-react"
+import { Send, Bot, User, Sparkles, Briefcase, GraduationCap, HeadphonesIcon, Menu, X, Trash2 } from "lucide-react"
 
 interface Message {
   id: string
@@ -59,6 +59,7 @@ export default function ModernChatbot() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [selectedRole, setSelectedRole] = useState<"support" | "teacher" | "assistant">("assistant")
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -69,18 +70,17 @@ export default function ModernChatbot() {
   }
 
   useEffect(() => {
-  const saved = localStorage.getItem("chatSessions")
-  if (saved) {
-    setSessions(JSON.parse(saved))
-  }
-}, [])
+    const saved = localStorage.getItem("chatSessions")
+    if (saved) {
+      setSessions(JSON.parse(saved))
+    }
+  }, [])
 
-// Save sessions to localStorage whenever they update
-useEffect(() => {
-  if (sessions.length > 0) {
-    localStorage.setItem("chatSessions", JSON.stringify(sessions))
-  }
-}, [sessions])
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem("chatSessions", JSON.stringify(sessions))
+    }
+  }, [sessions])
 
   useEffect(() => {
     scrollToBottom()
@@ -98,6 +98,18 @@ useEffect(() => {
     setSelectedRole(role)
   }
 
+  const deleteSession = (sessionId: string) => {
+    setSessions((prev) => prev.filter((session) => session.id !== sessionId))
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(null)
+    }
+  }
+
+  const deleteAllSessions = () => {
+    setSessions([])
+    setActiveSessionId(null)
+  }
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return
 
@@ -110,23 +122,20 @@ useEffect(() => {
 
     let currentSession = activeSession
     if (!currentSession) {
-      createNewSession(selectedRole)
-      currentSession = {
+      const newSession: ChatSession = {
         id: Date.now().toString(),
         title: `${roleConfigs[selectedRole].title} Chat`,
         messages: [],
         role: selectedRole,
       }
-      setSessions((prev) => [currentSession!, ...prev])
-      setActiveSessionId(currentSession.id)
+      setSessions((prev) => [newSession, ...prev])
+      setActiveSessionId(newSession.id)
+      currentSession = newSession
     }
 
-    // Add user message
     setSessions((prev) =>
       prev.map((session) =>
-        session.id === (currentSession?.id || activeSessionId)
-          ? { ...session, messages: [...session.messages, userMessage] }
-          : session,
+        session.id === currentSession!.id ? { ...session, messages: [...session.messages, userMessage] } : session,
       ),
     )
 
@@ -138,8 +147,8 @@ useEffect(() => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...(currentSession?.messages || []), userMessage],
-          role: currentSession?.role || selectedRole,
+          messages: [...currentSession.messages, userMessage],
+          role: currentSession.role,
         }),
       })
 
@@ -156,7 +165,7 @@ useEffect(() => {
 
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === (currentSession?.id || activeSessionId)
+          session.id === currentSession!.id
             ? { ...session, messages: [...session.messages, assistantMessage] }
             : session,
         ),
@@ -172,9 +181,7 @@ useEffect(() => {
 
       setSessions((prev) =>
         prev.map((session) =>
-          session.id === (currentSession?.id || activeSessionId)
-            ? { ...session, messages: [...session.messages, errorMessage] }
-            : session,
+          session.id === currentSession!.id ? { ...session, messages: [...session.messages, errorMessage] } : session,
         ),
       )
     } finally {
@@ -190,165 +197,207 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      <div className="container mx-auto max-w-6xl p-4 h-screen flex flex-col">
-        {/* Header */}
-        <div className="mb-6 text-center">
-          <div className="flex items-center justify-center gap-3 mb-12">
-            
-          
-          </div>
-          
+    <div className="min-h-[calc(100vh-100px)] bg-gradient-to-br from-slate-50 via-white to-slate-100 my-[50px]">
+      <div className="w-4/5 mx-auto my-6 h-screen flex flex-col">
+        <div className="mb-4 text-center">
+          <div className="flex items-center justify-center gap-3 mb-8"></div>
         </div>
 
-        <div className="flex-1 flex gap-6 min-h-0">
-          {/* Sidebar */}
-          <div className="w-80 flex flex-col gap-4">
-            {/* Role Selection */}
-            <Card className="p-6 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Bot className="w-5 h-5" />
-                Choose Your Assistant
-              </h3>
-              <Tabs value={selectedRole} onValueChange={(value) => setSelectedRole(value as any)} className="w-full">
-                <TabsList className="grid w-full grid-cols-1 gap-2 h-auto bg-transparent p-0">
-                  {Object.entries(roleConfigs).map(([key, config]) => {
-                    const Icon = config.icon
-                    return (
-                      <TabsTrigger
-                        key={key}
-                        value={key}
-                        className="flex items-center gap-3 p-4 rounded-xl border-2 border-transparent data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 hover:bg-gray-50 transition-all duration-200 justify-start h-auto"
-                      >
-                        <div className={`p-2 rounded-lg ${config.color} text-white`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-medium text-gray-900">{config.title}</div>
-                          <div className="text-xs text-gray-500">{config.description}</div>
-                        </div>
-                      </TabsTrigger>
-                    )
-                  })}
-                </TabsList>
-              </Tabs>
-              <Button
-                onClick={() => createNewSession(selectedRole)}
-                className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-              >
-                Start New Chat
-              </Button>
-            </Card>
+        <div className="flex-1 flex gap-3 min-h-0 relative ">
+          <Button
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="fixed top-12 left-4 z-50 bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg my-4"
+            size="sm"
+          >
+            {isSidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
+          </Button>
 
-            {/* Chat History */}
-            <Card className="flex-1 p-4 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              <h3 className="font-semibold text-gray-900 mb-3">Recent Chats</h3>
-              <ScrollArea className="h-full">
-                <div className="space-y-2">
-                  {sessions.map((session) => {
-                    const config = roleConfigs[session.role]
-                    const Icon = config.icon
-                    return (
-                      <button
-                        key={session.id}
-                        onClick={() => setActiveSessionId(session.id)}
-                        className={`w-full p-3 rounded-lg text-left transition-all duration-200 hover:bg-gray-50 ${
-                          activeSessionId === session.id
-                            ? "bg-blue-50 border-2 border-blue-200"
-                            : "border-2 border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className={`p-1 rounded ${config.color} text-white`}>
-                            <Icon className="w-3 h-3" />
+          <div
+            className={`
+            flex flex-col gap-4 transition-all duration-300 ease-in-out
+            ${isSidebarCollapsed ? "w-0 overflow-hidden" : "w-80 min-w-80"}
+            md:relative absolute md:translate-x-0 z-40
+            ${!isSidebarCollapsed ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          `}
+          >
+            {!isSidebarCollapsed && (
+              <>
+                <Card className="p-6 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    Choose Your Assistant
+                  </h3>
+                  <Tabs
+                    value={selectedRole}
+                    onValueChange={(value) => setSelectedRole(value as any)}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-1 gap-2 h-auto bg-transparent p-0">
+                      {Object.entries(roleConfigs).map(([key, config]) => {
+                        const Icon = config.icon
+                        return (
+                          <TabsTrigger
+                            key={key}
+                            value={key}
+                            className="flex items-center gap-3 p-4 rounded-xl border-2 border-transparent data-[state=active]:border-blue-200 data-[state=active]:bg-blue-50 hover:bg-gray-50 transition-all duration-200 justify-start h-auto"
+                          >
+                            <div className={`p-2 rounded-lg ${config.color} text-white`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="text-left">
+                              <div className="font-medium text-gray-900">{config.title}</div>
+                              <div className="text-xs text-gray-500">{config.description}</div>
+                            </div>
+                          </TabsTrigger>
+                        )
+                      })}
+                    </TabsList>
+                  </Tabs>
+                  <Button
+                    onClick={() => createNewSession(selectedRole)}
+                    className="w-full mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    Start New Chat
+                  </Button>
+                </Card>
+
+                <Card className="flex-1 p-4 shadow-xl border-0 bg-white/80 backdrop-blur-sm min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-900">Recent Chats</h3>
+                    <div className="flex gap-1">
+                      {sessions.length > 0 && (
+                        <Button
+                          onClick={deleteAllSessions}
+                          className="bg-transparent hover:bg-red-50 text-red-600 p-1 h-auto"
+                          size="sm"
+                          title="Delete all chats"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <ScrollArea className="h-full">
+                    <div className="space-y-2">
+                      {sessions.map((session) => {
+                        const config = roleConfigs[session.role]
+                        const Icon = config.icon
+                        return (
+                          <div
+                            key={session.id}
+                            className={`group relative p-3 rounded-lg transition-all duration-200 hover:bg-gray-50 ${
+                              activeSessionId === session.id
+                                ? "bg-blue-50 border-2 border-blue-200"
+                                : "border-2 border-transparent"
+                            }`}
+                          >
+                            <button onClick={() => setActiveSessionId(session.id)} className="w-full text-left">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className={`p-1 rounded ${config.color} text-white`}>
+                                  <Icon className="w-3 h-3" />
+                                </div>
+                                <span className="font-medium text-sm text-gray-900 truncate flex-1">
+                                  {session.title}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500">{session.messages.length} messages</div>
+                            </button>
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteSession(session.id)
+                              }}
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-transparent hover:bg-red-50 text-red-600 p-1 h-auto transition-opacity"
+                              size="sm"
+                              title="Delete chat"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
-                          <span className="font-medium text-sm text-gray-900 truncate">{session.title}</span>
-                        </div>
-                        <div className="text-xs text-gray-500">{session.messages.length} messages</div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </ScrollArea>
-            </Card>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </Card>
+              </>
+            )}
           </div>
 
-          {/* Main Chat Area */}
-          <div className="flex-1 flex  min-h-0">
+          <div className="flex-1 flex min-h-0 transition-all duration-300">
             <Card className="flex-1 shadow-xl border-0 bg-white/90 backdrop-blur-sm flex flex-col">
               {activeSession ? (
                 <>
-                  {/* Chat Header */}
-                  <div className="p-6 border-b border-gray-100">
+                  <div className="p-4 md:p-6 border-b border-gray-100">
                     <div className="flex items-center gap-3">
-                      <div className={`p-3 rounded-xl ${roleConfigs[activeSession.role].color} text-white shadow-lg`}>
+                      <div
+                        className={`p-2 md:p-3 rounded-xl ${roleConfigs[activeSession.role].color} text-white shadow-lg`}
+                      >
                         {(() => {
                           const Icon = roleConfigs[activeSession.role].icon
-                          return <Icon className="w-6 h-6" />
+                          return <Icon className="w-5 h-5 md:w-6 md:h-6" />
                         })()}
                       </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">{activeSession.title}</h2>
-                        <p className="text-gray-600">{roleConfigs[activeSession.role].description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg md:text-xl font-semibold text-gray-900 truncate">
+                          {activeSession.title}
+                        </h2>
+                        <p className="text-sm text-gray-600 truncate">{roleConfigs[activeSession.role].description}</p>
                       </div>
-                      <Badge variant="secondary" className="ml-auto">
+                      <Badge variant="secondary" className="hidden sm:inline-flex">
                         {activeSession.messages.length} messages
                       </Badge>
                     </div>
                   </div>
 
-                  {/* Messages */}
-                  <ScrollArea className="flex-1 p-6">
-                    <div className="space-y-6">
+                  <ScrollArea className="flex-1 p-4 md:p-6">
+                    <div className="space-y-4 md:space-y-6">
                       {activeSession.messages.map((message) => (
                         <div
                           key={message.id}
-                          className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                          className={`flex gap-2 md:gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                         >
                           {message.role === "assistant" && (
-                            <Avatar className="w-10 h-10 shadow-lg">
+                            <Avatar className="w-8 h-8 md:w-10 md:h-10 shadow-lg flex-shrink-0">
                               <AvatarFallback className={`${roleConfigs[activeSession.role].color} text-white`}>
-                                <Bot className="w-5 h-5" />
+                                <Bot className="w-4 h-4 md:w-5 md:h-5" />
                               </AvatarFallback>
                             </Avatar>
                           )}
                           <div
-                            className={`max-w-[70%] p-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
+                            className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl ${
                               message.role === "user"
                                 ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
                                 : "bg-white border border-gray-100"
                             }`}
                           >
                             <p
-                              className={`${message.role === "user" ? "text-white" : "text-gray-900"} leading-relaxed`}
+                              className={`${message.role === "user" ? "text-white" : "text-gray-900"} leading-relaxed text-sm md:text-base`}
                             >
                               {message.content}
                             </p>
                             <div
-                            className={`text-xs mt-2 ${
-                              message.role === "user" ? "text-blue-100" : "text-gray-500"
-                            }`}
-                          >
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </div>
+                              className={`text-xs mt-2 ${message.role === "user" ? "text-blue-100" : "text-gray-500"}`}
+                            >
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </div>
                           </div>
                           {message.role === "user" && (
-                            <Avatar className="w-10 h-10 shadow-lg">
+                            <Avatar className="w-8 h-8 md:w-10 md:h-10 shadow-lg flex-shrink-0">
                               <AvatarFallback className="bg-gray-600 text-white">
-                                <User className="w-5 h-5" />
+                                <User className="w-4 h-4 md:w-5 md:h-5" />
                               </AvatarFallback>
                             </Avatar>
                           )}
                         </div>
                       ))}
                       {isLoading && (
-                        <div className="flex gap-4 justify-start">
-                          <Avatar className="w-10 h-10 shadow-lg">
+                        <div className="flex gap-2 md:gap-4 justify-start">
+                          <Avatar className="w-8 h-8 md:w-10 md:h-10 shadow-lg">
                             <AvatarFallback className={`${roleConfigs[activeSession.role].color} text-white`}>
-                              <Bot className="w-5 h-5" />
+                              <Bot className="w-4 h-4 md:w-5 md:h-5" />
                             </AvatarFallback>
                           </Avatar>
-                          <div className="bg-white border border-gray-100 p-4 rounded-2xl shadow-lg">
+                          <div className="bg-white border border-gray-100 p-3 md:p-4 rounded-2xl shadow-lg">
                             <div className="flex gap-1">
                               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                               <div
@@ -367,36 +416,37 @@ useEffect(() => {
                     </div>
                   </ScrollArea>
 
-                  {/* Input Area */}
-                  <div className="p-6 border-t border-gray-100">
-                    <div className="flex gap-3">
+                  <div className="p-3 md:p-4 border-t border-gray-100">
+                    <div className="flex gap-2 md:gap-3">
                       <Input
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder={`Ask your ${roleConfigs[activeSession.role].title.toLowerCase()}...`}
-                        className="flex-1 h-12 px-4 rounded-xl border-2 border-gray-200 focus:border-blue-400 transition-colors duration-200 shadow-sm"
+                        className="flex-1 h-12 md:h-14 px-4 md:px-5 rounded-xl border-2 border-gray-200 focus:border-blue-400 transition-colors duration-200 shadow-sm text-sm md:text-base"
                         disabled={isLoading}
                       />
                       <Button
                         onClick={sendMessage}
                         disabled={!input.trim() || isLoading}
-                        className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-                      >
-                        <Send className="w-5 h-5" />
+                        className="h-12 md:h-14 px-4 md:px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                      >Send 
+                        <Send className="w-4 h-4 md:w-5 md:h-5" />
                       </Button>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center p-12">
+                <div className="flex-1 flex items-center justify-center p-6 md:p-12">
                   <div className="text-center">
-                    <div className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl shadow-xl mb-6 inline-block">
-                      <Sparkles className="w-16 h-16 text-white" />
+                    <div className="p-4 md:p-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl shadow-xl mb-4 md:mb-6 inline-block">
+                      <Sparkles className="w-12 h-12 md:w-16 md:h-16 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Welcome to AI Assistant Hub</h3>
-                    <p className="text-gray-600 mb-6 max-w-md">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+                      Welcome to AI Assistant Hub
+                    </h3>
+                    <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6 max-w-md px-4">
                       Choose your assistant type and start a conversation. Get professional help tailored to your needs.
                     </p>
                     <Button
