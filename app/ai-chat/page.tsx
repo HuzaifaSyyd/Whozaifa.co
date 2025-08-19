@@ -69,6 +69,20 @@ export default function ModernChatbot() {
   }
 
   useEffect(() => {
+  const saved = localStorage.getItem("chatSessions")
+  if (saved) {
+    setSessions(JSON.parse(saved))
+  }
+}, [])
+
+// Save sessions to localStorage whenever they update
+useEffect(() => {
+  if (sessions.length > 0) {
+    localStorage.setItem("chatSessions", JSON.stringify(sessions))
+  }
+}, [sessions])
+
+  useEffect(() => {
     scrollToBottom()
   }, [activeSession?.messages])
 
@@ -260,7 +274,7 @@ export default function ModernChatbot() {
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex  min-h-0">
             <Card className="flex-1 shadow-xl border-0 bg-white/90 backdrop-blur-sm flex flex-col">
               {activeSession ? (
                 <>
@@ -311,10 +325,12 @@ export default function ModernChatbot() {
                               {message.content}
                             </p>
                             <div
-                              className={`text-xs mt-2 ${message.role === "user" ? "text-blue-100" : "text-gray-500"}`}
-                            >
-                              {message.timestamp.toLocaleTimeString()}
-                            </div>
+                            className={`text-xs mt-2 ${
+                              message.role === "user" ? "text-blue-100" : "text-gray-500"
+                            }`}
+                          >
+                            {new Date(message.timestamp).toLocaleTimeString()}
+                          </div>
                           </div>
                           {message.role === "user" && (
                             <Avatar className="w-10 h-10 shadow-lg">
