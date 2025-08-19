@@ -132,7 +132,7 @@ const AboutSection = () => {
               transition={{ duration: 0.7, delay: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 z-10 rounded-2xl"></div>
-              <img src="/placeholder.svg?height=400&width=400" alt="Profile" className="w-full h-full object-cover" />
+              <img src="/developer_male.jpg" alt="Profile" className="w-full h-full object-cover" />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 50 }}
@@ -240,24 +240,28 @@ const ServicesSection = () => {
 const PortfolioSection = () => {
   const projects = [
     {
-      title: "E-commerce Platform",
-      category: "Web Development",
-      image: "/placeholder.svg?height=400&width=600",
+      title: "Prompt",
+      category: "AI",
+      image: "/whozprompt.jpg",
+      link:"/",
     },
     {
-      title: "Mobile Banking App",
+      title: "Block Piston",
       category: "Mobile Development",
       image: "/placeholder.svg?height=400&width=600",
+      link:"/",
     },
     {
       title: "Product Visualization",
       category: "3D Design",
       image: "/placeholder.svg?height=400&width=600",
+      link:"/",
     },
     {
       title: "Corporate Website",
       category: "Web Design",
       image: "/placeholder.svg?height=400&width=600",
+      link:"/",
     },
   ]
 
@@ -301,9 +305,9 @@ const PortfolioSection = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end items-center text-white p-6">
                     <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
                     <p className="text-sm opacity-80 mb-4">{project.category}</p>
-                    <Button variant="outline" className="text-white border-white hover:bg-white/20 button-elegant">
-                      View Project
-                    </Button>
+                    <Button asChild className="rounded">
+                        <Link href={project.link}>View Project</Link>
+                      </Button>
                   </div>
                 </div>
               </motion.div>
@@ -494,6 +498,55 @@ const ContactSection = () => {
   )
 }
 
+const ClientsSection = () => {
+  const clients = [
+    { name: "3S-Cars", logo: "/3slogo.jpg" },
+    { name: "Msr Graphy", logo: "/Msrgraphy.jpg" },
+    { name: "Ipo Expert", logo: "/ipologo.jpg" },
+  ]
+
+  return (
+    <section id="clients" className="py-20 md:py-32 bg-muted/50 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute -top-20 -left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: [0.34, 1.56, 0.64, 1] }}
+          className="max-w-5xl mx-auto"
+        >
+          <h2 className="text-3xl md:text-5xl font-bold mb-12 text-center">Clients</h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {clients.map((client, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="glass p-6 rounded-2xl flex flex-col items-center justify-center text-center hover:shadow-md hover-lift transition-all duration-300"
+              >
+                <img
+                  src={client.logo}
+                  alt={client.name}
+                  className="w-20 h-20 object-contain mb-4"
+                />
+                <h3 className="text-lg font-medium">{client.name}</h3>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
+
 export default function Home() {
   return (
     <main>
@@ -501,6 +554,7 @@ export default function Home() {
       <AboutSection />
       <ServicesSection />
       <PortfolioSection />
+      <ClientsSection />
       <ContactSection />
     </main>
   )
