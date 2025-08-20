@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const systemPrompt = rolePrompts[role as keyof typeof rolePrompts] || rolePrompts.assistant
 
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: groq("openai/gpt-oss-120b"),
       system: systemPrompt,
       messages: messages.map((msg: any) => ({
         role: msg.role,
