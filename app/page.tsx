@@ -263,6 +263,12 @@ const PortfolioSection = () => {
       image: "/sweet.jpg",
       link:"https://sweet-delight-delta.vercel.app/",
     },
+    {
+      title: "Evoxa Ai",
+      category: "Ai",
+      image: "/Evoxa-banner.jpg",
+      link:"https://evoxa.vercel.app/",
+    },
   ]
 
   const [ref, inView] = useInView({
