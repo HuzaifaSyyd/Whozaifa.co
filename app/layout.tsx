@@ -2,11 +2,10 @@ import type React from "react"
 import { Inter, Sankofa_Display as SF_Pro_Display } from "next/font/google"
 import { Providers } from "@/components/providers"
 import Header from "@/components/header"
-import Footer from "@/components/footer"
+import FooterWrapper from "@/components/footer-wrapper" // client wrapper
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
-// Load SF Pro Display for Apple-like aesthetics
 const sfPro = SF_Pro_Display({
   subsets: ["latin"],
   variable: "--font-outfit",
@@ -14,16 +13,15 @@ const sfPro = SF_Pro_Display({
   weight: ["400"],
 })
 
-// Keep Inter as fallback
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" })
 
 export const metadata = {
   title: "Whozaifa",
   description: "Professional portfolio website showcasing my work and services",
-    generator: 'Huzaifa_Syyd',
-    icons: {
-      icon: { url: '/favicon.jpg' }, // Or the path to your icon.png or other file
-    },
+  generator: 'Huzaifa_Syyd',
+  icons: {
+    icon: { url: '/favicon.jpg' },
+  },
 }
 
 export default function RootLayout({
@@ -37,7 +35,7 @@ export default function RootLayout({
         <Providers>
           <Header />
           {children}
-          <Footer />
+          <FooterWrapper /> {/* conditionally show footer */}
           <Toaster />
         </Providers>
       </body>
