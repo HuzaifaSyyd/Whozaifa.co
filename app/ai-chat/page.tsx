@@ -26,6 +26,109 @@ interface ChatSession {
   role: "support" | "teacher" | "assistant"
 }
 
+const TypingIndicator = () => (
+  <div className="flex gap-1">
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+  </div>
+)
+
+const FormattedMessage = ({ content }: { content: string }) => {
+  // Split content into paragraphs and format
+  const formatContent = (text: string) => {
+    // Split by double newlines for paragraphs
+    const paragraphs = text.split("\n\n")
+
+    return paragraphs.map((paragraph, index) => {
+      // Check if it's a bullet point list
+      if (paragraph.includes("•") || paragraph.includes("-") || paragraph.includes("*")) {
+        const lines = paragraph.split("\n")
+        return (
+          <div key={index} className="mb-4">
+            {lines.map((line, lineIndex) => {
+              if (line.trim().startsWith("•") || line.trim().startsWith("-") || line.trim().startsWith("*")) {
+                const bulletContent = line.replace(/^[•\-*]\s*/, "")
+                return (
+                  <div key={lineIndex} className="flex items-start gap-2 mb-2">
+                    <span className="text-blue-500 font-bold mt-1">•</span>
+                    <span className="flex-1">{formatInlineText(bulletContent)}</span>
+                  </div>
+                )
+              }
+              return (
+                <div key={lineIndex} className="mb-2">
+                  {formatInlineText(line)}
+                </div>
+              )
+            })}
+          </div>
+        )
+      }
+
+      // Regular paragraph
+      return (
+        <div key={index} className="mb-4 last:mb-0">
+          {formatInlineText(paragraph)}
+        </div>
+      )
+    })
+  }
+
+  // Format inline text with bold and emphasis
+  const formatInlineText = (text: string) => {
+    // Split by **bold** patterns
+    const parts = text.split(/(\*\*.*?\*\*)/g)
+
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        const boldText = part.slice(2, -2)
+        return (
+          <strong key={index} className="font-semibold text-gray-900">
+            {boldText}
+          </strong>
+        )
+      }
+
+      // Handle *italic* patterns
+      const italicParts = part.split(/(\*.*?\*)/g)
+      return italicParts.map((italicPart, italicIndex) => {
+        if (italicPart.startsWith("*") && italicPart.endsWith("*") && !italicPart.startsWith("**")) {
+          const italicText = italicPart.slice(1, -1)
+          return (
+            <em key={`${index}-${italicIndex}`} className="font-light text-gray-700">
+              {italicText}
+            </em>
+          )
+        }
+        return <span key={`${index}-${italicIndex}`}>{italicPart}</span>
+      })
+    })
+  }
+
+  return <div className="leading-relaxed">{formatContent(content)}</div>
+}
+
+const StreamingText = ({ text, onComplete }: { text: string; onComplete?: () => void }) => {
+  const [displayedText, setDisplayedText] = useState("")
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText((prev) => prev + text[currentIndex])
+        setCurrentIndex((prev) => prev + 1)
+      }, 20) // Adjust speed here (lower = faster)
+
+      return () => clearTimeout(timer)
+    } else if (onComplete) {
+      onComplete()
+    }
+  }, [currentIndex, text, onComplete])
+
+  return <FormattedMessage content={displayedText} />
+}
+
 const roleConfigs = {
   support: {
     title: "Customer Support",
@@ -33,7 +136,7 @@ const roleConfigs = {
     icon: HeadphonesIcon,
     color: "bg-blue-500",
     prompt:
-      "You are a helpful customer support agent. Answer questions about services, pricing, policies, and troubleshooting in a clear and professional way.",
+      "You are a helpful customer support agent. Answer questions about services, pricing, policies, and troubleshooting in a clear and professional way. Use bullet points and bold text for important information.",
   },
   teacher: {
     title: "AI Teacher",
@@ -41,7 +144,7 @@ const roleConfigs = {
     icon: GraduationCap,
     color: "bg-green-500",
     prompt:
-      "You are an expert teacher. Break down complex concepts into easy-to-understand explanations with examples. Make learning engaging and accessible.",
+      "You are an expert teacher. Break down complex concepts into easy-to-understand explanations with examples. Use bullet points, bold headings, and structured formatting. Make learning engaging and accessible.",
   },
   assistant: {
     title: "General Assistant",
@@ -49,7 +152,7 @@ const roleConfigs = {
     icon: Briefcase,
     color: "bg-purple-500",
     prompt:
-      "You are a friendly and helpful general assistant. Provide guidance, tips, and engage in meaningful conversation while being professional and supportive.",
+      "You are a friendly and helpful general assistant. Provide guidance, tips, and engage in meaningful conversation while being professional and supportive. Use bullet points and formatting to make responses clear and easy to read.",
   },
 }
 
@@ -58,6 +161,7 @@ export default function ModernChatbot() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [selectedRole, setSelectedRole] = useState<"support" | "teacher" | "assistant">("assistant")
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -77,9 +181,7 @@ export default function ModernChatbot() {
   }, [])
 
   useEffect(() => {
-    if (sessions.length > 0) {
-      localStorage.setItem("chatSessions", JSON.stringify(sessions))
-    }
+    localStorage.setItem("chatSessions", JSON.stringify(sessions))
   }, [sessions])
 
   useEffect(() => {
@@ -163,6 +265,8 @@ export default function ModernChatbot() {
         timestamp: new Date(),
       }
 
+      setStreamingMessageId(assistantMessage.id)
+
       setSessions((prev) =>
         prev.map((session) =>
           session.id === currentSession!.id
@@ -174,7 +278,7 @@ export default function ModernChatbot() {
       console.error("Error:", error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm sorry. Please try again.",
+        content: "I'm sorry, there was an error processing your request. Please try again.",
         role: "assistant",
         timestamp: new Date(),
       }
@@ -197,21 +301,26 @@ export default function ModernChatbot() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-100px)] bg-gradient-to-br from-slate-50 via-white to-slate-100 my-[50px]">
-      <div className="w-4/5 mx-auto my-6 h-screen flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Main container with 80% width and top/bottom margins */}
+      <div className="w-5/5 p-0 md:p-0 lg:p-6 mx-auto my-6 h-screen flex flex-col">
+        {/* Header section */}
         <div className="mb-4 text-center">
           <div className="flex items-center justify-center gap-3 mb-8"></div>
         </div>
 
-        <div className="flex-1 flex gap-3 min-h-0 relative ">
+        {/* Main content area with sidebar and chat */}
+        <div className="flex-1 flex gap-3 min-h-0 relative">
+          {/* Hamburger menu toggle button */}
           <Button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="fixed top-12 left-4 z-50 bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg my-4"
+            className="fixed top-20 left-4 z-50 bg-white/90 backdrop-blur-sm text-gray-900 hover:bg-white shadow-lg"
             size="sm"
           >
             {isSidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
           </Button>
 
+          {/* Sidebar with assistant selection and chat history */}
           <div
             className={`
             flex flex-col gap-4 transition-all duration-300 ease-in-out
@@ -222,6 +331,7 @@ export default function ModernChatbot() {
           >
             {!isSidebarCollapsed && (
               <>
+                {/* Assistant selection card */}
                 <Card className="p-6 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
                   <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Bot className="w-5 h-5" />
@@ -261,6 +371,7 @@ export default function ModernChatbot() {
                   </Button>
                 </Card>
 
+                {/* Chat history card */}
                 <Card className="flex-1 p-4 shadow-xl border-0 bg-white/80 backdrop-blur-sm min-w-0 overflow-hidden">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-gray-900">Recent Chats</h3>
@@ -323,10 +434,12 @@ export default function ModernChatbot() {
             )}
           </div>
 
+          {/* Main chat area */}
           <div className="flex-1 flex min-h-0 transition-all duration-300">
             <Card className="flex-1 shadow-xl border-0 bg-white/90 backdrop-blur-sm flex flex-col">
               {activeSession ? (
                 <>
+                  {/* Chat header */}
                   <div className="p-4 md:p-6 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                       <div
@@ -349,6 +462,7 @@ export default function ModernChatbot() {
                     </div>
                   </div>
 
+                  {/* Messages area */}
                   <ScrollArea className="flex-1 p-4 md:p-6">
                     <div className="space-y-4 md:space-y-6">
                       {activeSession.messages.map((message) => (
@@ -370,11 +484,20 @@ export default function ModernChatbot() {
                                 : "bg-white border border-gray-100"
                             }`}
                           >
-                            <p
-                              className={`${message.role === "user" ? "text-white" : "text-gray-900"} leading-relaxed text-sm md:text-base`}
-                            >
-                              {message.content}
-                            </p>
+                            {message.role === "user" ? (
+                              <p className="text-white leading-relaxed text-sm md:text-base">{message.content}</p>
+                            ) : (
+                              <div className="text-gray-900 text-sm md:text-base">
+                                {streamingMessageId === message.id ? (
+                                  <StreamingText
+                                    text={message.content}
+                                    onComplete={() => setStreamingMessageId(null)}
+                                  />
+                                ) : (
+                                  <FormattedMessage content={message.content} />
+                                )}
+                              </div>
+                            )}
                             <div
                               className={`text-xs mt-2 ${message.role === "user" ? "text-blue-100" : "text-gray-500"}`}
                             >
@@ -398,17 +521,7 @@ export default function ModernChatbot() {
                             </AvatarFallback>
                           </Avatar>
                           <div className="bg-white border border-gray-100 p-3 md:p-4 rounded-2xl shadow-lg">
-                            <div className="flex gap-1">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                              <div
-                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                style={{ animationDelay: "0.1s" }}
-                              ></div>
-                              <div
-                                className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                                style={{ animationDelay: "0.2s" }}
-                              ></div>
-                            </div>
+                            <TypingIndicator />
                           </div>
                         </div>
                       )}
@@ -416,8 +529,9 @@ export default function ModernChatbot() {
                     </div>
                   </ScrollArea>
 
-                  <div className="p-3 md:p-4 border-t border-gray-100">
-                    <div className="flex gap-2 md:gap-3">
+                  {/* Message input area with full width on mobile */}
+                  <div className="px-0 py-2 md:p-4 border-t border-gray-100">
+                    <div className="flex gap-1 md:gap-3 px-1 md:px-0">
                       <Input
                         ref={inputRef}
                         value={input}
@@ -431,13 +545,14 @@ export default function ModernChatbot() {
                         onClick={sendMessage}
                         disabled={!input.trim() || isLoading}
                         className="h-12 md:h-14 px-4 md:px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-                      >Send 
+                      >
                         <Send className="w-4 h-4 md:w-5 md:h-5" />
                       </Button>
                     </div>
                   </div>
                 </>
               ) : (
+                /* Welcome screen */
                 <div className="flex-1 flex items-center justify-center p-6 md:p-12">
                   <div className="text-center">
                     <div className="p-4 md:p-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-3xl shadow-xl mb-4 md:mb-6 inline-block">
